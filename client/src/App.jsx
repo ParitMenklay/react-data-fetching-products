@@ -3,34 +3,37 @@ import axios from "axios";
 import "./App.css";
 
 function App() {
-  // 1. สร้าง State เพื่อเก็บข้อมูล Products
+  // 1. เก็บข้อมูลสินค้า
   const [products, setProducts] = useState([]);
+  
+  // 2. (เพิ่มใหม่) เก็บสถานะการโหลด: "loading", "complete", "failed"
+  const [status, setStatus] = useState("loading");
 
-  // 2. ใช้ useEffect เพื่อเรียกข้อมูลตอนเข้าหน้าเว็บครั้งแรก
   useEffect(() => {
     getProducts();
   }, []);
 
-  // ฟังก์ชันดึงข้อมูล (GET)
   const getProducts = async () => {
     try {
+      // เริ่มต้นโหลด (จริงๆ default เป็น loading อยู่แล้ว แต่ใส่เพื่อความชัวร์)
+      setStatus("loading");
+      
       const response = await axios.get("http://localhost:4001/products");
-      // จุดสังเกต: ใน server/app.js บรรทัด 99 ส่งมาเป็น res.json({ data: products })
-      // ดังนั้นเวลา axios รับมา ข้อมูลจะซ้อนอยู่ที่ response.data.data
+      
       setProducts(response.data.data);
+      
+      // (เพิ่มใหม่) เมื่อได้ข้อมูลแล้ว เปลี่ยนสถานะเป็น complete
+      setStatus("complete");
     } catch (error) {
       console.error("เกิดข้อผิดพลาดในการดึงข้อมูล:", error);
+      // (เพิ่มใหม่) เมื่อ error เปลี่ยนสถานะเป็น failed
+      setStatus("failed");
     }
   };
 
-  // ฟังก์ชันลบข้อมูล (DELETE)
   const handleDelete = async (id) => {
     try {
-      // ยิง Request ไปลบที่ Server
       await axios.delete(`http://localhost:4001/products/${id}`);
-
-      // อัปเดต State หน้าจอทันที (Client-side update)
-      // กรองเอาเฉพาะตัวที่ id ไม่ตรงกับตัวที่ลบ เก็บไว้ใน State ใหม่
       const newProducts = products.filter((product) => product.id !== id);
       setProducts(newProducts);
     } catch (error) {
@@ -38,13 +41,37 @@ function App() {
     }
   };
 
+  // -------------------------------------------------
+  // ส่วนแสดงผลตามสถานะ (Logic ของ Exercise #3)
+  // -------------------------------------------------
+
+  // ถ้าสถานะเป็น loading ให้โชว์คำว่า Loading...
+  if (status === "loading") {
+    return (
+      <div className="App">
+        <h1 style={{ textAlign: "center", marginTop: "20px" }}>Loading...</h1>
+      </div>
+    );
+  }
+
+  // ถ้าสถานะเป็น failed ให้โชว์คำว่า Fetching Error...
+  if (status === "failed") {
+    return (
+      <div className="App">
+        <h1 style={{ textAlign: "center", marginTop: "20px", color: "red" }}>
+          Fetching Error...
+        </h1>
+      </div>
+    );
+  }
+
+  // ถ้าสถานะเป็น complete ให้โชว์รายการสินค้าตามปกติ
   return (
     <div className="App">
       <div className="app-wrapper">
         <h1 className="app-title">Products</h1>
       </div>
       <div className="product-list">
-        {/* 3. ใช้ map เพื่อวนลูปแสดงข้อมูล */}
         {products.map((product) => {
           return (
             <div className="product" key={product.id}>
